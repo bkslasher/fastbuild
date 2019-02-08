@@ -1,14 +1,22 @@
-// Vec3.cpp
+// Struct
 //------------------------------------------------------------------------------
 
 // Includes
 //------------------------------------------------------------------------------
 #include "Core/PrecompiledHeader.h"
-#include "Vec3.h"
+#include "Struct.h"
 
-// Static Data
+// Core
+#include "Core/Reflection/ReflectionInfo.h"
+
+// Struct_ReflectionInfo
 //------------------------------------------------------------------------------
-/*static*/ const float Vec3::s_Zero[] = { 0.0f, 0.0f, 0.0f };
-/*static*/ const float Vec3::s_One[] = { 1.0f, 1.0f, 1.0f };
+class Struct_ReflectionInfo : public ReflectionInfo
+{
+public:
+    explicit Struct_ReflectionInfo() { SetTypeName( "Struct" ); m_IsAbstract = true; }
+    virtual ~Struct_ReflectionInfo() = default;
+};
+Struct_ReflectionInfo g_Struct_ReflectionInfo;
 
 //------------------------------------------------------------------------------

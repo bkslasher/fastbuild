@@ -12,7 +12,7 @@
 
 #if defined( __WINDOWS__ )
     #include <Lmcons.h>
-    #include <windows.h>
+    #include <Windows.h>
     #include <stdio.h>
 #endif
 
@@ -85,7 +85,7 @@
 
             for ( size_t processorID = 0; processorID < maxLogicalProcessorsInThisGroup; ++processorID )
             {
-                numProcessorsInThisGroup += ( ( groupProcessorMask.Mask & ( 1i64 << processorID ) ) != 0 ) ? 1 : 0;
+                numProcessorsInThisGroup += ( ( groupProcessorMask.Mask & ( uint64_t(1) << processorID ) ) != 0 ) ? 1 : 0;
             }
 
             numProcessorsInAllGroups += numProcessorsInThisGroup;

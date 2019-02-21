@@ -19,7 +19,7 @@
 Describes a compiler and specifies how to interact with the compiler process for dependency tracking,
 distribution, caching and more.
       </p>
-<div class='code'>Compiler( 'name' )              // (optional) Alias
+<div class='code'>Compiler( 'name' )              // Alias
 {
   .Executable                   // Primary compiler executable
   .ExtraFiles                   // (optional) Additional files (usually dlls) required by the compiler.
@@ -32,6 +32,7 @@ distribution, caching and more.
   .CustomEnvironmentVariables   // (optional) Environment variables to set on remote host
   .ClangRewriteIncludes         // (optional) Use Clang's -frewrite-includes option when preprocessing (default: true)
   .VS2012EnumBugFix             // (optional) Enable work-around for bug in VS2012 compiler (default: false)
+  .Environment                  // (optional) Environment variables to use for local build
 }
 </div>
     </div>
@@ -193,6 +194,13 @@ This results in very unintuitive compile errors.</p>
 	This work-around may be impractical if a large number of enums are affected, or if the enum(s) originate in system headers or
 	external code. In those cases the .VS2012EnumBugFix option can be enabled to insert the
 	additional whitespace at build-time.</p>
+
+  	<p><hr></p>
+
+	<p><b>.Environment</b> - String or ArrayOfStrings - (Optional)</p>
+	<p>When set, overrides the environment for local compiles</p>
+   <p>This allows you to have a different environment per compiler</p>
+
 </div>
 
 

@@ -3,8 +3,6 @@
 
 // Includes
 //------------------------------------------------------------------------------
-#include "Tools/FBuild/FBuildCore/PrecompiledHeader.h"
-
 #include "FBuild.h"
 
 #include "FLog.h"
@@ -26,6 +24,7 @@
 
 #include "Core/Env/Assert.h"
 #include "Core/Env/Env.h"
+#include "Core/Env/ErrorFormat.h"
 #include "Core/Env/Types.h"
 #include "Core/FileIO/FileIO.h"
 #include "Core/FileIO/FileStream.h"
@@ -117,7 +116,7 @@ FBuild::~FBuild()
     ASSERT( !m_OldWorkingDir.IsEmpty() );
     if ( !FileIO::SetCurrentDir( m_OldWorkingDir ) )
     {
-        FLOG_ERROR( "Failed to restore working dir: '%s' (error: %u)", m_OldWorkingDir.Get(), Env::GetLastErr() );
+        FLOG_ERROR( "Failed to restore working dir. Error: %s Dir: '%s'", LAST_ERROR_STR, m_OldWorkingDir.Get() );
     }
 }
 
@@ -130,7 +129,7 @@ bool FBuild::Initialize( const char * nodeGraphDBFile )
     // handle working dir
     if ( !FileIO::SetCurrentDir( m_Options.GetWorkingDir() ) )
     {
-        FLOG_ERROR( "Failed to set working dir: '%s' (error: %u)", m_Options.GetWorkingDir().Get(), Env::GetLastErr() );
+        FLOG_ERROR( "Failed to set working dir. Error: %s Dir: '%s'", LAST_ERROR_STR, m_Options.GetWorkingDir().Get() );
         return false;
     }
 
@@ -182,34 +181,6 @@ bool FBuild::Initialize( const char * nodeGraphDBFile )
             m_Options.m_UseCacheWrite = false;
             FDELETE m_Cache;
             m_Cache = nullptr;
-        }
-    }
-
-    //
-    // create the connection management system if we might need it
-    if ( m_Options.m_AllowDistributed )
-    {
-        Array< AString > workers;
-        if ( settings->GetWorkerList().IsEmpty() )
-        {
-            // check for workers through brokerage
-            // TODO:C This could be moved out of the main code path
-            m_WorkerBrokerage.FindWorkers( workers );
-        }
-        else
-        {
-            workers = settings->GetWorkerList();
-        }
-
-        if ( workers.IsEmpty() )
-        {
-            FLOG_WARN( "No workers available - Distributed compilation disabled" );
-            m_Options.m_AllowDistributed = false;
-        }
-        else
-        {
-            OUTPUT( "Distributed Compilation : %u Workers in pool '%s'\n", (uint32_t)workers.GetSize(), m_WorkerBrokerage.GetBrokerageRoot().Get() );
-            m_Client = FNEW( Client( workers, m_Options.m_DistributionPort, settings->GetWorkerConnectionLimit(), m_Options.m_DistVerbose ) );
         }
     }
 
@@ -352,7 +323,7 @@ bool FBuild::SaveDependencyGraph( const char * nodeGraphDBFile ) const
     // rename tmp file
     if ( FileIO::FileMove( tmpFileName, AStackString<>( nodeGraphDBFile ) ) == false )
     {
-        FLOG_ERROR( "Failed to rename temp DB file '%s' (%i)", tmpFileName.Get(), Env::GetLastErr() );
+        FLOG_ERROR( "Failed to rename temp DB file. Error: %s TmpFile: '%s'", LAST_ERROR_STR, tmpFileName.Get() );
         return false;
     }
 
@@ -378,6 +349,36 @@ bool FBuild::Build( Node * nodeToBuild )
 
     // create worker threads
     m_JobQueue = FNEW( JobQueue( m_Options.m_NumWorkerThreads ) );
+
+    // create the connection management system if needed
+    // (must be after JobQueue is created)
+    if ( m_Options.m_AllowDistributed )
+    {
+        const SettingsNode * settings = m_DependencyGraph->GetSettings();
+
+        Array< AString > workers;
+        if ( settings->GetWorkerList().IsEmpty() )
+        {
+            // check for workers through brokerage
+            // TODO:C This could be moved out of the main code path
+            m_WorkerBrokerage.FindWorkers( workers );
+        }
+        else
+        {
+            workers = settings->GetWorkerList();
+        }
+
+        if ( workers.IsEmpty() )
+        {
+            FLOG_WARN( "No workers available - Distributed compilation disabled" );
+            m_Options.m_AllowDistributed = false;
+        }
+        else
+        {
+            OUTPUT( "Distributed Compilation : %u Workers in pool '%s'\n", (uint32_t)workers.GetSize(), m_WorkerBrokerage.GetBrokerageRoot().Get() );
+            m_Client = FNEW( Client( workers, m_Options.m_DistributionPort, settings->GetWorkerConnectionLimit(), m_Options.m_DistVerbose ) );
+        }
+    }
 
     m_Timer.Start();
     m_LastProgressOutputTime = 0.0f;

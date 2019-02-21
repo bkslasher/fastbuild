@@ -3,8 +3,6 @@
 
 // Includes
 //------------------------------------------------------------------------------
-#include "Tools/FBuild/FBuildCore/PrecompiledHeader.h"
-
 #include "Error.h"
 #include "Tools/FBuild/FBuildCore/BFF/BFFIterator.h"
 #include "Tools/FBuild/FBuildCore/BFF/BFFParser.h"
@@ -12,6 +10,7 @@
 #include "Tools/FBuild/FBuildCore/FLog.h"
 #include "Tools/FBuild/FBuildCore/Graph/NodeGraph.h"
 
+#include "Core/Env/ErrorFormat.h"
 #include "Core/Strings/AStackString.h"
 #include "Core/Tracing/Tracing.h"
 
@@ -289,9 +288,9 @@
                                                        const AString & include,
                                                        uint32_t errorCode )
 {
-    FormatError( iter, 1033u, nullptr, "Error reading include '%s' (Error: %u).",
-                                       include.Get(),
-                                       errorCode );
+    FormatError( iter, 1033u, nullptr, "Error reading include. Error: %s File: '%s'",
+                                       ERROR_STR( errorCode ),
+                                       include.Get() );
 }
 
 // Error_1034_OperationNotSupported

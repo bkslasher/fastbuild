@@ -1,35 +1,35 @@
-// FunctionVCXProject
+// ErrorFormat - Format errors in a consistent way
 //------------------------------------------------------------------------------
+#pragma once
 
 // Includes
 //------------------------------------------------------------------------------
-// FBuild
-#include "FunctionVCXProject.h"
-#include "Tools/FBuild/FBuildCore/Graph/NodeGraph.h"
-#include "Tools/FBuild/FBuildCore/Graph/VCXProjectNode.h"
-
-// Core
+#include "Core/Env/Env.h"
 #include "Core/Strings/AStackString.h"
 
-// CONSTRUCTOR
+// Forward Declarations
 //------------------------------------------------------------------------------
-FunctionVCXProject::FunctionVCXProject()
-: Function( "VCXProject" )
-{
-}
 
-// AcceptsHeader
+// Defines
 //------------------------------------------------------------------------------
-/*virtual*/ bool FunctionVCXProject::AcceptsHeader() const
-{
-    return true;
-}
+#define LAST_ERROR_STR      ErrorFormat( Env::GetLastErr() ).GetString()
+#define ERROR_STR( ... )    ErrorFormat( __VA_ARGS__ ).GetString()
 
-// CreateNode
+// ErrorFormat
 //------------------------------------------------------------------------------
-/*virtual*/ Node * FunctionVCXProject::CreateNode() const
+class ErrorFormat
 {
-    return FNEW( VCXProjectNode );
-}
+public:
+    ErrorFormat();
+    explicit ErrorFormat( uint32_t error );
+    ~ErrorFormat();
+
+    const char * GetString() const { return m_Buffer.Get(); }
+
+private:
+    void Format( uint32_t error );
+
+    AStackString<32> m_Buffer;
+};
 
 //------------------------------------------------------------------------------

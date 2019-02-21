@@ -3,8 +3,6 @@
 
 // Includes
 //------------------------------------------------------------------------------
-#include "Tools/FBuild/FBuildCore/PrecompiledHeader.h"
-
 // FBuildCore
 #include "ProjectGeneratorBase.h"
 #include "Tools/FBuild/FBuildCore/FBuild.h"
@@ -16,12 +14,15 @@
 
 // Core
 #include "Core/Containers/AutoPtr.h"
-#include "Core/Env/Env.h"
+#include "Core/Env/ErrorFormat.h"
+#include "Core/FileIO/FileIO.h"
+#include "Core/FileIO/FileStream.h"
 #include "Core/FileIO/PathUtils.h"
 #include "Core/Strings/AStackString.h"
 
 // system
 #include <stdarg.h> // for va_args
+#include <string.h> // for memcmp
 
 // CONSTRUCTOR
 //------------------------------------------------------------------------------
@@ -230,7 +231,7 @@ void ProjectGeneratorBase::AddConfig( const AString & name, const Node * targetN
     // are not necessarily a single file)
     if ( Node::EnsurePathExistsForFile( fileName ) == false )
     {
-        FLOG_ERROR( "%s - Invalid path for '%s' (error: %u)", generatorId, fileName.Get(), Env::GetLastErr() );
+        FLOG_ERROR( "%s - Invalid path. Error: %s Target: '%s'", generatorId, LAST_ERROR_STR, fileName.Get() );
         return false;
     }
 
@@ -238,12 +239,12 @@ void ProjectGeneratorBase::AddConfig( const AString & name, const Node * targetN
     FileStream f;
     if ( !f.Open( fileName.Get(), FileStream::WRITE_ONLY ) )
     {
-        FLOG_ERROR( "%s - Failed to open '%s' for write (error: %u)", generatorId, fileName.Get(), Env::GetLastErr() );
+        FLOG_ERROR( "%s - Failed to open file for write. Error: %s Target: '%s'", generatorId, LAST_ERROR_STR, fileName.Get() );
         return false;
     }
     if ( f.Write( content.Get(), content.GetLength() ) != content.GetLength() )
     {
-        FLOG_ERROR( "%s - Error writing to '%s' (error: %u)", generatorId, fileName.Get(), Env::GetLastErr() );
+        FLOG_ERROR( "%s - Error writing file. Error: %s Target: '%s'", generatorId, LAST_ERROR_STR, fileName.Get() );
         return false;
     }
     f.Close();

@@ -3,8 +3,6 @@
 
 // Includes
 //------------------------------------------------------------------------------
-#include "Tools/FBuild/FBuildCore/PrecompiledHeader.h"
-
 #include "CompilerNode.h"
 
 #include "Tools/FBuild/FBuildCore/FBuild.h"
@@ -28,6 +26,7 @@ REFLECT_NODE_BEGIN( CompilerNode, Node, MetaNone() )
     REFLECT( m_ExecutableRootPath,  "ExecutableRootPath",   MetaOptional() + MetaPath() )
     REFLECT( m_SimpleDistributionMode,  "SimpleDistributionMode",   MetaOptional() )
     REFLECT( m_CompilerFamilyString,"CompilerFamily",       MetaOptional() )
+    REFLECT_ARRAY( m_Environment,   "Environment",          MetaOptional() )
 
     // Internal
     REFLECT( m_CompilerFamilyEnum,  "CompilerFamilyEnum",   MetaHidden() )
@@ -44,6 +43,7 @@ CompilerNode::CompilerNode()
     , m_CompilerFamilyString( "auto" )
     , m_CompilerFamilyEnum( static_cast< uint8_t >( CUSTOM ) )
     , m_SimpleDistributionMode( false )
+    , m_EnvironmentString( nullptr )
 {
 }
 
@@ -304,7 +304,10 @@ bool CompilerNode::InitializeCompilerFamily( const BFFIterator & iter, const Fun
 
 // DESTRUCTOR
 //------------------------------------------------------------------------------
-CompilerNode::~CompilerNode() = default;
+CompilerNode::~CompilerNode()
+{
+    FREE( (void *)m_EnvironmentString );
+}
 
 // DoBuild
 //------------------------------------------------------------------------------
@@ -317,6 +320,13 @@ CompilerNode::~CompilerNode() = default;
 
     m_Stamp = m_Manifest.GetTimeStamp();
     return Node::NODE_RESULT_OK;
+}
+
+// GetEnvironmentString
+//------------------------------------------------------------------------------
+const char * CompilerNode::GetEnvironmentString() const
+{
+    return Node::GetEnvironmentString( m_Environment, m_EnvironmentString );
 }
 
 //------------------------------------------------------------------------------

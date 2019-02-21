@@ -3,8 +3,6 @@
 
 // Includes
 //------------------------------------------------------------------------------
-#include "Tools/FBuild/FBuildCore/PrecompiledHeader.h"
-
 #include "ObjectNode.h"
 
 #include "Tools/FBuild/FBuildCore/BFF/Functions/FunctionObjectList.h"
@@ -27,6 +25,7 @@
 
 // Core
 #include "Core/Env/Env.h"
+#include "Core/Env/ErrorFormat.h"
 #include "Core/FileIO/ConstMemoryStream.h"
 #include "Core/FileIO/FileIO.h"
 #include "Core/FileIO/FileStream.h"
@@ -336,7 +335,7 @@ ObjectNode::~ObjectNode()
 
     // spawn the process
     CompileHelper ch;
-    if ( !ch.SpawnCompiler( job, GetName(), GetCompiler()->GetExecutable(), fullArgs ) ) // use response file for MSVC
+    if ( !ch.SpawnCompiler( job, GetName(), GetCompiler(), GetCompiler()->GetExecutable(), fullArgs ) ) // use response file for MSVC
     {
         return NODE_RESULT_FAILED; // SpawnCompiler has logged error
     }
@@ -594,7 +593,7 @@ Node::BuildResult ObjectNode::DoBuild_QtRCC( Job * job )
         EmitCompilationMessage( fullArgs, false );
 
         CompileHelper ch;
-        if ( !ch.SpawnCompiler( job, GetName(), GetCompiler()->GetExecutable(), fullArgs ) )
+        if ( !ch.SpawnCompiler( job, GetName(), GetCompiler(), GetCompiler()->GetExecutable(), fullArgs ) )
         {
             return NODE_RESULT_FAILED; // compile has logged error
         }
@@ -636,7 +635,7 @@ Node::BuildResult ObjectNode::DoBuild_QtRCC( Job * job )
         }
 
         CompileHelper ch;
-        if ( !ch.SpawnCompiler( job, GetName(), GetCompiler()->GetExecutable(), fullArgs ) )
+        if ( !ch.SpawnCompiler( job, GetName(), GetCompiler(), GetCompiler()->GetExecutable(), fullArgs ) )
         {
             return NODE_RESULT_FAILED; // compile has logged error
         }
@@ -665,7 +664,7 @@ Node::BuildResult ObjectNode::DoBuild_QtRCC( Job * job )
 
     // spawn the process
     CompileHelper ch;
-    if ( !ch.SpawnCompiler( job, GetName(), GetCompiler()->GetExecutable(), fullArgs ) )
+    if ( !ch.SpawnCompiler( job, GetName(), GetCompiler(), GetCompiler()->GetExecutable(), fullArgs ) )
     {
         return NODE_RESULT_FAILED; // compile has logged error
     }
@@ -1191,7 +1190,7 @@ bool ObjectNode::RetrieveFromCache( Job * job )
                 if ( timeSetOK == false )
                 {
                     cache->FreeMemory( cacheData, cacheDataSize );
-                    FLOG_ERROR( "Failed to set timestamp on file after cache hit '%s' (%u)", fileNames[ i ].Get(), Env::GetLastErr() );
+                    FLOG_ERROR( "Failed to set timestamp after cache hit. Error: %s Target: '%s'", LAST_ERROR_STR, fileNames[ i ].Get() );
                     return false;
                 }
             }
@@ -1903,6 +1902,7 @@ bool ObjectNode::BuildPreprocessedOutput( const Args & fullArgs, Job * job, bool
     CompileHelper ch( false ); // don't handle output (we'll do that)
     // TODO:A Add checks in BuildArgs for length of dedicated preprocessor
     if ( !ch.SpawnCompiler( job, GetName(),
+         useDedicatedPreprocessor ? GetDedicatedPreprocessor() : GetCompiler(),
          useDedicatedPreprocessor ? GetDedicatedPreprocessor()->GetExecutable() : GetCompiler()->GetExecutable(),
          fullArgs ) )
     {
@@ -2112,7 +2112,7 @@ bool ObjectNode::WriteTmpFile( Job * job, AString & tmpDirectory, AString & tmpF
     tmpDirectory.AppendFormat( "%08X%c", sourceNameHash, NATIVE_SLASH );
     if ( FileIO::DirectoryCreate( tmpDirectory ) == false )
     {
-        job->Error( "Failed to create temp directory '%s' to build '%s' (error %u)", tmpDirectory.Get(), GetName().Get(), Env::GetLastErr() );
+        job->Error( "Failed to create temp directory. Error: %s TmpDir: '%s' Target: '%s'", LAST_ERROR_STR, tmpDirectory.Get(), GetName().Get() );
         job->OnSystemError();
         return NODE_RESULT_FAILED;
     }
@@ -2125,14 +2125,14 @@ bool ObjectNode::WriteTmpFile( Job * job, AString & tmpDirectory, AString & tmpF
         // Try again
         if ( WorkerThread::CreateTempFile( tmpFileName, tmpFile ) == false )
         {
-            job->Error( "Failed to create temp file '%s' to build '%s' (error %u)", tmpFileName.Get(), GetName().Get(), Env::GetLastErr() );
+            job->Error( "Failed to create temp file. Error: %s TmpFile: '%s' Target: '%s'", LAST_ERROR_STR, tmpFileName.Get(), GetName().Get() );
             job->OnSystemError();
             return NODE_RESULT_FAILED;
         }
     }
     if ( tmpFile.Write( dataToWrite, dataToWriteSize ) != dataToWriteSize )
     {
-        job->Error( "Failed to write to temp file '%s' to build '%s' (error %u)", tmpFileName.Get(), GetName().Get(), Env::GetLastErr() );
+        job->Error( "Failed to write to temp file. Error: %s TmpFile: '%s' Target: '%s'", LAST_ERROR_STR, tmpFileName.Get(), GetName().Get() );
         job->OnSystemError();
         return NODE_RESULT_FAILED;
     }
@@ -2170,7 +2170,7 @@ bool ObjectNode::BuildFinalOutput( Job * job, const Args & fullArgs ) const
 
     // spawn the process
     CompileHelper ch( true, job->GetAbortFlagPointer() );
-    if ( !ch.SpawnCompiler( job, GetName(), compiler, fullArgs, workingDir.IsEmpty() ? nullptr : workingDir.Get() ) )
+    if ( !ch.SpawnCompiler( job, GetName(), GetCompiler(), compiler, fullArgs, workingDir.IsEmpty() ? nullptr : workingDir.Get() ) )
     {
         // did spawn fail, or did we spawn and fail to compile?
         if ( ch.GetResult() != 0 )
@@ -2220,14 +2220,19 @@ ObjectNode::CompileHelper::~CompileHelper() = default;
 //------------------------------------------------------------------------------
 bool ObjectNode::CompileHelper::SpawnCompiler( Job * job,
                                                const AString & name,
+                                               const CompilerNode * compilerNode,
                                                const AString & compiler,
                                                const Args & fullArgs,
                                                const char * workingDir )
 {
-    const char * environmentString = ( FBuild::IsValid() ? FBuild::Get().GetEnvironmentString() : nullptr );
+    const char * environmentString = nullptr;
     if ( ( job->IsLocal() == false ) && ( job->GetToolManifest() ) )
     {
         environmentString = job->GetToolManifest()->GetRemoteEnvironmentString();
+    }
+    else
+    {
+        environmentString = compilerNode->GetEnvironmentString();
     }
 
     // spawn the process
@@ -2241,7 +2246,7 @@ bool ObjectNode::CompileHelper::SpawnCompiler( Job * job,
             return false;
         }
 
-        job->Error( "Failed to spawn process (error 0x%x) to build '%s'\n", Env::GetLastErr(), name.Get() );
+        job->Error( "Failed to spawn process. Error: %s Target: '%s'\n", LAST_ERROR_STR, name.Get() );
         job->OnSystemError();
         return false;
     }
@@ -2275,7 +2280,7 @@ bool ObjectNode::CompileHelper::SpawnCompiler( Job * job,
             DumpOutput( job, m_Out.Get(), m_OutSize, name );
         }
 
-        job->Error( "Failed to build Object (error 0x%x) '%s'\n", m_Result, name.Get() );
+        job->Error( "Failed to build Object. Error: %s Target: '%s'\n", ERROR_STR( m_Result ), name.Get() );
 
         return false;
     }

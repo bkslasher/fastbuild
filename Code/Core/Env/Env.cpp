@@ -3,16 +3,15 @@
 
 // Includes
 //------------------------------------------------------------------------------
-#include "Core/PrecompiledHeader.h"
-
 #include "Env.h"
 
 // Core
+#include "Core/Containers/Array.h"
 #include "Core/Strings/AStackString.h"
 
 #if defined( __WINDOWS__ )
+    #include "Core/Env/WindowsHeader.h"
     #include <Lmcons.h>
-    #include <Windows.h>
     #include <stdio.h>
 #endif
 
@@ -347,6 +346,32 @@ static bool IsStdOutRedirectedInternal()
     #else
         #error Unknown platform
     #endif
+}
+
+// AllocEnvironmentString
+//------------------------------------------------------------------------------
+/*static*/ const char * Env::AllocEnvironmentString( const Array< AString > & environment )
+{
+    size_t len = 0;
+    const size_t numEnvVars = environment.GetSize();
+    for ( size_t i = 0; i < numEnvVars; ++i )
+    {
+        len += environment[i].GetLength() + 1;
+    }
+    len += 1; // for double null
+
+    // Now that the environment string length is calculated, allocate and fill.
+    char * mem = (char *)ALLOC( len );
+    const char * environmentString = mem;
+    for ( size_t i = 0; i < numEnvVars; ++i )
+    {
+        const AString & envVar = environment[i];
+        AString::Copy( envVar.Get(), mem, envVar.GetLength() + 1 );
+        mem += ( envVar.GetLength() + 1 );
+    }
+    *mem = 0;
+
+    return environmentString;
 }
 
 //------------------------------------------------------------------------------

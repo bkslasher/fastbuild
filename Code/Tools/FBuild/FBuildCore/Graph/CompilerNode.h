@@ -51,8 +51,8 @@ public:
     };
     CompilerFamily GetCompilerFamily() const { return static_cast<CompilerFamily>( m_CompilerFamilyEnum ); }
 
-
     const AString & GetExecutable() const { return m_StaticDependencies[ 0 ].GetNode()->GetName(); }
+    const char * GetEnvironmentString() const;
 
 private:
     bool InitializeCompilerFamily( const BFFIterator & iter, const Function * function );
@@ -60,18 +60,21 @@ private:
     virtual BuildResult DoBuild( Job * job ) override;
 
     // Exposed params
-    AString             m_Executable;
-    Array< AString >    m_ExtraFiles;
-    Array< AString >    m_CustomEnvironmentVariables;
+    AString                 m_Executable;
+    Array< AString >        m_ExtraFiles;
+    Array< AString >        m_CustomEnvironmentVariables;
+    bool                    m_AllowDistribution;
+    bool                    m_VS2012EnumBugFix;
+    bool                    m_ClangRewriteIncludes;
+    AString                 m_ExecutableRootPath;
+    AString                 m_CompilerFamilyString;
+    uint8_t                 m_CompilerFamilyEnum;
+    bool                    m_SimpleDistributionMode;
+    ToolManifest            m_Manifest;
+    Array< AString >        m_Environment;
 
-    bool            m_AllowDistribution;
-    bool            m_VS2012EnumBugFix;
-    bool            m_ClangRewriteIncludes;
-    AString         m_ExecutableRootPath;
-    AString         m_CompilerFamilyString;
-    uint8_t         m_CompilerFamilyEnum;
-    bool            m_SimpleDistributionMode;
-    ToolManifest    m_Manifest;
+    // Internal state
+    mutable const char *    m_EnvironmentString;
 };
 
 //------------------------------------------------------------------------------
